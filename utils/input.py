@@ -1,10 +1,8 @@
-import curses
-import fcntl
+
 import os
 import sys
-import termios
+
 from threading import Thread
-import tty
 from time import sleep
 
 # class _Getch:
@@ -86,18 +84,34 @@ def obterTecla(remove: bool = True):
 oldterm =None
 fd = None
 
+# class CapturaInputBase(Thread, ABC):
+#     pass
+
 class CapturaInput(Thread):
 
     def run(self):
         global pressionados
-        while True:
-            a = sys.stdin.read(1)
-            # print(repr(a))
-           
-            if a != "":
-                pressionados.append(Pressionado(a))
+        if os.name == "nt":
+            import msvcrt
+            while True:
+                a = ""
+                if msvcrt.kbhit():
+                    a = msvcrt.getch().decode("utf-8")
+                # print(repr(a))
+                if a != "":
+                    pressionados.append(Pressionado(a))
 
-            sleep(0.05)
+                sleep(0.05)
+        else:
+            while True:
+                a = sys.stdin.read(1)
+                print(repr(a))
+            
+                if a != "":
+                    pressionados.append(Pressionado(a))
+
+                sleep(0.05)
+            
         # def m(stdscr: curses.window):
         #     stdscr.nodelay(True)
 
@@ -124,22 +138,28 @@ class CapturaInput(Thread):
 
     @staticmethod
     def iniciar():
-        global fd, oldterm
-        fd = sys.stdin.fileno()
-        oldterm = termios.tcgetattr(fd)
-        newattr = termios.tcgetattr(fd)
-        newattr[3] = newattr[3] & ~termios.ICANON & ~termios.ECHO
-        termios.tcsetattr(fd, termios.TCSANOW, newattr)
-        oldflags = fcntl.fcntl(fd, fcntl.F_GETFL)
-        fcntl.fcntl(fd, fcntl.F_SETFL, os.O_NDELAY)
+        if os.name == "nt":
+            pass
+        else:
+            import termios
+            import fcntl
+            global fd, oldterm
+            fd = sys.stdin.fileno()
+            oldterm = termios.tcgetattr(fd)
+            newattr = termios.tcgetattr(fd)
+            newattr[3] = newattr[3] & ~termios.ICANON & ~termios.ECHO
+            termios.tcsetattr(fd, termios.TCSANOW, newattr)
+            oldflags = fcntl.fcntl(fd, fcntl.F_GETFL)
+            fcntl.fcntl(fd, fcntl.F_SETFL, os.O_NDELAY)
         tarefa.start()
         # with keyboard.Listener(on_press=CapturaInput.on_press) as listener:
         #     listener.join()
 
     @staticmethod 
     def finalizar():
-        global fd, oldterm
-        if (fd != None and oldterm != None):
-            termios.tcsetattr(fd, termios.TCSAFLUSH, oldterm)
+        if os.name != "nt":
+            global fd, oldterm
+            if (fd != None and oldterm != None):
+                termios.tcsetattr(fd, termios.TCSAFLUSH, oldterm)
 
 tarefa = CapturaInput()

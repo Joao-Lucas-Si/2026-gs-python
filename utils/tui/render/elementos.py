@@ -1,6 +1,4 @@
 from abc import ABC, abstractmethod
-from curses import window
-import curses
 from enum import Enum
 import math
 from os import get_terminal_size
@@ -11,7 +9,7 @@ from typing import Callable, Optional, overload, override
 from utils.arquivos import ler_arquivo
 from utils.input import obterTecla
 from utils.tui.efeitos import Efeito, aplicarEfeitos, desaplicarEfeitos
-from utils.tui.render.cursor import CursesCursor, Cursor, PrintCursos
+from utils.tui.render.cursor import Cursor, PrintCursos
 
 
 class Elemento(ABC):
@@ -729,8 +727,9 @@ class Input(Elemento):
 
 
 def escrever(elemento: Elemento):
+    pass
     # print(CursesCursor().instancia.janela)
-    elemento.escrever(CursesCursor().instancia)
+    # elemento.escrever(CursesCursor().instancia)
     # janela.refresh()
 
 # def iniciar_escrita():

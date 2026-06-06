@@ -1,4 +1,3 @@
-import tty
 from typing import Callable
 import os
 from xml.dom.minidom import Element
@@ -7,8 +6,6 @@ from utils.input import CapturaInput, Pressionado, estaPressionado, tarefa
 from utils.sistema import esperar, limpar
 from utils.tui.efeitos import CorAlvo, Cores1B
 from utils.tui.render.elementos import Coluna, Elemento, Tabela, Texto
-
-
 
 
 class Opcao():
@@ -24,7 +21,7 @@ def centralizar(conteudo: str, separador: str = "-"):
     largura -= len(conteudo)
     if largura % 2 != 0:
         largura -=2
-    print(separador * int(largura / 2), conteudo, separador * int(largura / 2))
+    print(separador * int(largura / 2), conteudo, separador * int(largura / 2),  flush=True)
             
 
 
@@ -50,18 +47,18 @@ def menu(titulo: str, opcoes: list[Opcao], colunas: int = 3, top: Callable[[], E
             selecionado+=1
         elif estaPressionado("s") and selecionado + colunas <= len(opcoes) - 1:
             selecionado+=colunas
-        if estaPressionado("\n"):
+        if estaPressionado("\n") or estaPressionado("\r"):
             break
         print(Coluna([Texto(titulo),
-            Texto("use w para subir uma opção, s para descer, a para ir a esquerda, d para a direita, e enter para escolher"),]).renderizar())
-        print(top().renderizar())
+            Texto("use w para subir uma opção, s para descer, a para ir a esquerda, d para a direita, e enter para escolher"),]).renderizar(), flush=True)
+        print(top().renderizar(), flush=True)
         print(Coluna([
             
             Tabela(colunas, list(map(lambda x: selecionar(x[0], x[1].texto), enumerate(opcoes))))
-        ]).renderizar())
+        ]).renderizar(), flush=True)
         # print("\n")
         
-        esperar(0.5)
+        esperar(1)
     opcoes[selecionado].codigo()
         # def renderizar():
         #     limpar()       

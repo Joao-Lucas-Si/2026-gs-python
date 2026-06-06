@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-import curses
+# import curses
 from typing import Optional
 
 
@@ -15,34 +15,34 @@ class Linha():
     x: int
     char: str
 
-class CursesCursor(Cursor):
+# class CursesCursor(Cursor):
     
-    def __init__(self, janela: Optional[curses.window] = None) -> None:
-        super().__init__()
-        if janela:
-            self.janela = janela
+#     def __init__(self, janela: Optional[curses.window] = None) -> None:
+#         super().__init__()
+#         if janela:
+#             self.janela = janela
     
-    def escrever(self, y: int, x: int, content: str):
-        self.janela.addstr(y, x, content)
-        self.janela.refresh()
+#     def escrever(self, y: int, x: int, content: str):
+#         self.janela.addstr(y, x, content)
+#         self.janela.refresh()
     
-    @staticmethod
-    def iniciar():
-        def instanciar(janela: curses.window):
-            global curse
-            curse = CursesCursor(janela)
+#     @staticmethod
+#     def iniciar():
+#         def instanciar(janela: curses.window):
+#             global curse
+#             curse = CursesCursor(janela)
             
-            max = janela.getmaxyx()
-            for i in range(max[0] - 2):
-                for j in range(max[1]):
-                    curse.escrever(i, j, " ")
-        curses.wrapper(instanciar)
+#             max = janela.getmaxyx()
+#             for i in range(max[0] - 2):
+#                 for j in range(max[1]):
+#                     curse.escrever(i, j, " ")
+#         curses.wrapper(instanciar)
         
-    @property
-    def instancia(self) -> Cursor:
-        return curse
+#     @property
+#     def instancia(self) -> Cursor:
+#         return curse
 
-curse: CursesCursor
+# curse: CursesCursor
 
 class PrintCursos(Cursor):
     linhas: list[Linha]

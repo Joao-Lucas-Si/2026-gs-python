@@ -12,6 +12,7 @@ from utils.tui.render.elementos import Ascii, Coluna, Tabela, Texto
 def main():
     # mostrarLogo()
     # mostrarIntegrantes()
+    print("aa")
     menuMissao()
     #menuAcoes()
     #ciclo(1)

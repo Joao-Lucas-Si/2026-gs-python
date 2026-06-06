@@ -1,7 +1,7 @@
 import random
 from typing import TypedDict
 
-from cycler import V
+# from cycler import V
 
 from src.acoes import menuAcoes
 from src.banco_dados import banco_dados
@@ -54,36 +54,36 @@ def ciclo_tabela(
     temperatura_motor: ValorDado,
 ) -> Elemento:
     return Tabela(
-        4,
+        3,
         [
             Coluna([Texto("temperatura")]),
             Coluna([Texto(f"{temperatura.valor}")]),
             Coluna([Texto(f"{temperatura.estado}")]),
-            Coluna([Texto(f"{temperatura.comentario}")]),
+            #Coluna([Texto(f"{temperatura.comentario}")]),
             Coluna([Texto("Comunicacao")]),
             Coluna([Texto(f"{comunicacao.valor}")]),
             Coluna([Texto(f"{comunicacao.estado}")]),
-            Coluna([Texto(f"{comunicacao.comentario}")]),
+            #Coluna([Texto(f"{comunicacao.comentario}")]),
             Coluna([Texto("Energia")]),
             Coluna([Texto(f"{bateria.valor:.2f}")]),
             Coluna([Texto(f"{bateria.estado}")]),
-            Coluna([Texto(f"{bateria.comentario}")]),
+            #Coluna([Texto(f"{bateria.comentario}")]),
             Coluna([Texto("Oxigênio")]),
             Coluna([Texto(f"{oxigenio.valor}")]),
             Coluna([Texto(f"{oxigenio.estado}")]),
-            Coluna([Texto(f"{oxigenio.comentario}")]),
+            #Coluna([Texto(f"{oxigenio.comentario}")]),
             Coluna([Texto("Estabilidade")]),
             Coluna([Texto(f"{estabilidade.valor}")]),
             Coluna([Texto(f"{estabilidade.estado}")]),
-            Coluna([Texto(f"{estabilidade.comentario}")]),
+            #Coluna([Texto(f"{estabilidade.comentario}")]),
             Coluna([Texto("integridade do modulo")]),
             Coluna([Texto(f"{integridade_modulo.valor}")]),
             Coluna([Texto(f"{integridade_modulo.estado}")]),
-            Coluna([Texto(f"{integridade_modulo.comentario}")]),
+            #Coluna([Texto(f"{integridade_modulo.comentario}")]),
             Coluna([Texto("temperatura do motor")]),
             Coluna([Texto(f"{temperatura_motor.valor}")]),
             Coluna([Texto(f"{temperatura_motor.estado}")]),
-            Coluna([Texto(f"{temperatura_motor.comentario}")]),
+           #Coluna([Texto(f"{temperatura_motor.comentario}")]),
         ],
     )
 
