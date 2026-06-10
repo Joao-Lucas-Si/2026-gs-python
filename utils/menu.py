@@ -1,12 +1,9 @@
-import tty
 from typing import Callable
 import os
 from xml.dom.minidom import Element
 from utils.sistema import esperar, limpar
 from utils.tui.efeitos import CorAlvo, Cores1B
 from utils.tui.render.elementos import Coluna, Elemento, Tabela, Texto
-
-
 
 
 class Opcao():
@@ -22,7 +19,7 @@ def centralizar(conteudo: str, separador: str = "-"):
     largura -= len(conteudo)
     if largura % 2 != 0:
         largura -=2
-    print(separador * int(largura / 2), conteudo, separador * int(largura / 2))
+    print(separador * int(largura / 2), conteudo, separador * int(largura / 2),  flush=True)
             
 
 
