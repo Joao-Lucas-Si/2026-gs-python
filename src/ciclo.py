@@ -1,23 +1,25 @@
 import random
-from typing import TypedDict
+from typing import Text, TypedDict
 
 from cycler import V
+from h11 import Event
+from keyboard import press
 
+from src.eventos import Evento, Eventos
+from src.banco_dados import Estado, Parametro, Tendencia
 from src.acoes import menuAcoes
 from src.banco_dados import banco_dados
 from src.recomendacao import (
-    Estado,
     estado_bateria,
     estado_comunicacao,
     estado_estabilidade,
     estado_integridade,
-    estado_motor,
     estado_oxigenio,
     estado_temperatura,
 )
-from utils.input import estaPressionado
+from utils.arquivos import Database
 from utils.menu import Opcao, menu
-from utils.sistema import esperar, limpar, pausar
+from utils.sistema import InputTarefa, esperar, limpar, pausar
 
 from utils.tui.efeitos import CorAlvo, Cores1B
 from utils.tui.render.elementos import (
@@ -30,7 +32,14 @@ from utils.tui.render.elementos import (
     Tabela,
     Texto,
 )
-from src.dados import dados_missao, dados_atuais
+from src.dados import dados_missao, dados_atuais, historico_tendencias
+
+
+def flat[T](lista: list[list[T]]):
+    x: list[T] = []
+    for sub in lista:
+        x.extend(sub)
+    return x
 
 
 class ValorDado:
@@ -44,47 +53,20 @@ class ValorDado:
         self.comentario = comentario
 
 
-def ciclo_tabela(
-    temperatura: ValorDado,
-    comunicacao: ValorDado,
-    bateria: ValorDado,
-    oxigenio: ValorDado,
-    estabilidade: ValorDado,
-    integridade_modulo: ValorDado,
-    temperatura_motor: ValorDado,
-) -> Elemento:
+def ciclo_tabela(parametros: list[Parametro]) -> Elemento:
     return Tabela(
-        4,
-        [
-            Coluna([Texto("temperatura")]),
-            Coluna([Texto(f"{temperatura.valor}")]),
-            Coluna([Texto(f"{temperatura.estado}")]),
-            Coluna([Texto(f"{temperatura.comentario}")]),
-            Coluna([Texto("Comunicacao")]),
-            Coluna([Texto(f"{comunicacao.valor}")]),
-            Coluna([Texto(f"{comunicacao.estado}")]),
-            Coluna([Texto(f"{comunicacao.comentario}")]),
-            Coluna([Texto("Energia")]),
-            Coluna([Texto(f"{bateria.valor:.2f}")]),
-            Coluna([Texto(f"{bateria.estado}")]),
-            Coluna([Texto(f"{bateria.comentario}")]),
-            Coluna([Texto("Oxigênio")]),
-            Coluna([Texto(f"{oxigenio.valor}")]),
-            Coluna([Texto(f"{oxigenio.estado}")]),
-            Coluna([Texto(f"{oxigenio.comentario}")]),
-            Coluna([Texto("Estabilidade")]),
-            Coluna([Texto(f"{estabilidade.valor}")]),
-            Coluna([Texto(f"{estabilidade.estado}")]),
-            Coluna([Texto(f"{estabilidade.comentario}")]),
-            Coluna([Texto("integridade do modulo")]),
-            Coluna([Texto(f"{integridade_modulo.valor}")]),
-            Coluna([Texto(f"{integridade_modulo.estado}")]),
-            Coluna([Texto(f"{integridade_modulo.comentario}")]),
-            Coluna([Texto("temperatura do motor")]),
-            Coluna([Texto(f"{temperatura_motor.valor}")]),
-            Coluna([Texto(f"{temperatura_motor.estado}")]),
-            Coluna([Texto(f"{temperatura_motor.comentario}")]),
-        ],
+        3,
+        flat(
+            [
+                [
+                    Coluna([Texto(parametro.nome)]),
+                    Coluna([Texto(f"{parametro.valor}")]),
+                    Coluna([Texto(f"{parametro.tendencia_atual.estado.name}")]),
+                    # Coluna([Texto(f"{parametro.tendencia_atual.recomendacao}")]),
+                ]
+                for parametro in parametros
+            ]
+        ),
     )
 
 
@@ -118,12 +100,97 @@ def cabecalho(ciclos):
         ).renderizar()
     )
 
+def obter_evento():
+    if random.randint(0, 10) > 9:
+        
+        eventos = Eventos.valores()
+        evento = eventos[random.randint(0, len(eventos) - 1)]
+        return evento.value
+
+def mostrar_evento(evento: Evento):
+    return Coluna(
+        [
+            Texto(""),
+            Texto(f"evento: {evento.nome}"),
+            Texto(evento.descricao),
+        ]
+    )
+
+
+def obter_situacao():
+    atual = sum(
+        map(
+            lambda x: x.value,
+            [
+                parametro.tendencia_atual.estado
+                for parametro in banco_dados.rodada.parametros
+            ],
+        )
+    )
+
+    total = 6 * 2
+    critico = int(total * 0.6)
+    media = int(total * 0.4)
+    baixa = int(total * 0.1)
+    estavel = 0
+
+    if atual == estavel:
+        return Texto("a nave esta em excelentes condições")
+    elif atual == total:
+        return Texto("o sistema inteiro está comprometido")
+    elif atual > critico:
+        return Texto("o sistema está quase comprometido")
+    elif atual > media:
+        return Texto("o sistema está parcialmente comprometido")
+    elif atual > baixa:
+        return Texto("a nave apresenta algumas falhas")
+    else:
+        return Texto("o sistema ainda está em condições aceitaveis")
+
+
+def obter_situacao_comparativa():
+    if len(banco_dados.rodada.tendencias) > 0:
+        anterior = banco_dados.rodada.tendencias[-1]
+        atual = [
+            parametro.tendencia_atual.estado
+            for parametro in banco_dados.rodada.parametros
+        ]
+
+        anterior_pontos = sum(list(map(lambda x: x.value, anterior)))
+        atual_pontos = sum(map(lambda x: x.value, atual))
+
+        if anterior_pontos > atual_pontos:
+            return Texto(
+                "esse ciclo apresenta uma melhora na condição em comparação ao anterior"
+            )
+        elif anterior_pontos < atual_pontos:
+            return Texto(
+                "esse ciclo apresenta uma piora na condição em comparação ao anterior"
+            )
+        return Texto(
+            "quanto o ciclo atual quanto o anteiror apresentam a mesma condição"
+        )
+    return Coluna([])
+
 
 def ciclo(ciclos):
     def nothing():
         pass
 
+    db = banco_dados
+    rodada = db.rodada
+    parametros = rodada.parametros
     esperar(0.5)
+    evento = obter_evento()
+    if (evento):
+        evento.consequencia(rodada.parametros)
+        for i, parametro in enumerate(rodada.parametros):
+            rodada.dados_atuais[i] = parametro.valor
+    perigos = [
+        parametro
+        for parametro in parametros
+        if parametro.tendencia_atual.estado != Estado.ESTAVEL
+    ]
     menu(
         "Relatorio ciclo",
         [
@@ -131,106 +198,120 @@ def ciclo(ciclos):
             Opcao(Coluna([Texto("abrir ações")]), menuAcoes),
         ],
         colunas=2,
-        top=lambda: Tabela(
-            2,
+        top=lambda: Coluna(
             [
+                Tabela(
+                    2,
+                    [
+                        Coluna(
+                            [
+                                Texto(f"Ciclo {ciclos}"),
+                                ciclo_tabela(parametros),
+                            ]
+                        ),
+                        Coluna([Ascii("recursos/ascii/naves/foguete_medio.txt")]),
+                    ],
+                ),
+                Coluna(
+                    [Texto("Situação"), obter_situacao(), obter_situacao_comparativa()],
+                ),
+                (
+                    Coluna([Texto("recomendações"), Texto("")])
+                    if len(perigos)
+                    else Coluna([])
+                ),
                 Coluna(
                     [
-                        Texto(f"Ciclo {ciclos}"),
-                        ciclo_tabela(
-                            ValorDado(
-                                dados_atuais[0],
-                                estado_temperatura(dados_atuais[0]).name,
-                                "",
-                            ),
-                            ValorDado(
-                                dados_atuais[1],
-                                estado_comunicacao(dados_atuais[1]).name,
-                                "",
-                            ),
-                            ValorDado(
-                                dados_atuais[2],
-                                estado_bateria(dados_atuais[2]).name,
-                                "",
-                            ),
-                            ValorDado(
-                                dados_atuais[3],
-                                estado_oxigenio(dados_atuais[3]).name,
-                                "",
-                            ),
-                            ValorDado(
-                                dados_atuais[4],
-                                estado_estabilidade(dados_atuais[4]).name,
-                                "",
-                            ),
-                            ValorDado(
-                                dados_atuais[5],
-                                estado_integridade(dados_atuais[5]).name,
-                                "",
-                            ),
-                            ValorDado(
-                                dados_atuais[6], estado_motor(dados_atuais[6]).name, ""
-                            ),
-                        ),
+                        Texto(f" - {parametro.tendencia_atual.recomendacao}")
+                        for parametro in perigos
                     ]
                 ),
-                Coluna([Ascii("recursos/ascii/naves/foguete_medio.txt")]),
-            ],
+                mostrar_evento(evento) if evento != None else Coluna([]),
+            ]
         ),
     )
 
 
 # recursos/ascii/naves/foguete_medio.txt
 def gerenciar_ciclo():
-    total_ciclo = 1
-    cabecalho(total_ciclo)
-    while banco_dados.tempo > 0:
+
+    while banco_dados.rodada.tempo_atual < banco_dados.rodada.tempo_final:
         limpar()
-        ciclo(total_ciclo)
-        total_ciclo += 1
-        banco_dados.tempo -= 1
-        dados_atuais[2] -= random.randint(5, 15)
-        dados_atuais[1] -= random.randint(1, 5)
-        dados_atuais[0] += random.randint(-5, 5)
-        dados_atuais[3] -= random.randint(1, 5)
+        if banco_dados.rodada.tempo_atual == 1:
+            cabecalho(banco_dados.rodada.tempo_atual)
+        banco_dados.rodada.dados.append(
+            [parametro.valor for parametro in banco_dados.rodada.parametros]
+        )
+        ciclo(banco_dados.rodada.tempo_atual)
 
-       
-        if estado_temperatura(dados_atuais[0]) == Estado.MORTIFERO or estado_comunicacao(dados_atuais[1]) == Estado.MORTIFERO or estado_bateria(dados_atuais[2]) == Estado.MORTIFERO or estado_oxigenio(dados_atuais[3]) == Estado.MORTIFERO or estado_estabilidade(dados_atuais[4]) == Estado.MORTIFERO or estado_integridade(dados_atuais[5]) == Estado.MORTIFERO or estado_motor(dados_atuais[6]) == Estado.MORTIFERO:
+        historico_tendencias.append(
+            [
+                parametro.tendencia_atual.estado
+                for parametro in banco_dados.rodada.parametros
+            ]
+        )
+        for parametro in banco_dados.rodada.parametros:
+            parametro.tendencia_atual.atividade += 1
+            parametro.gerar_tendencia()
+            
+
+        if (
+            estado_temperatura(dados_atuais[0]) == Estado.MORTIFERO
+            or estado_comunicacao(dados_atuais[1]) == Estado.MORTIFERO
+            or estado_bateria(dados_atuais[2]) == Estado.MORTIFERO
+            or estado_oxigenio(dados_atuais[3]) == Estado.MORTIFERO
+            or estado_estabilidade(dados_atuais[4]) == Estado.MORTIFERO
+            or estado_integridade(dados_atuais[5]) == Estado.MORTIFERO
+        ):
             break
+        banco_dados.rodada.tempo_atual += 1
 
-    if banco_dados.tempo > 0:
+    if banco_dados.rodada.tempo_atual < banco_dados.rodada.tempo_final:
         derrota()
     else:
         banco_dados.pontos += sum(
-            map(lambda material: material.value.valor, banco_dados.asteroide.materiais)
+            map(
+                lambda material: material.value.valor,
+                banco_dados.rodada.asteroide.materiais,
+            )
         )
 
         vitoria()
 
+
 class Dado(TypedDict):
     dado: str
     estado: Estado
+
 
 def derrota():
     i = 0
     estados: list[Dado] = [
         {"estado": estado_temperatura(dados_atuais[0]), "dado": "temperatura"},
         {"estado": estado_comunicacao(dados_atuais[1]), "dado": "comunicação"},
-        {"estado": estado_bateria(dados_atuais[2]),"dado": "bateria"},
-        {"estado": estado_oxigenio(dados_atuais[3]),"dado": "oxigenio"},
-        {"estado": estado_estabilidade(dados_atuais[4]),"dado": "estabilidade"},
-        {"estado": estado_integridade(dados_atuais[5]),"dado": "integridade"},
-        {"estado": estado_motor(dados_atuais[6]),"dado": "motor"},
+        {"estado": estado_bateria(dados_atuais[2]), "dado": "bateria"},
+        {"estado": estado_oxigenio(dados_atuais[3]), "dado": "oxigenio"},
+        {"estado": estado_estabilidade(dados_atuais[4]), "dado": "estabilidade"},
+        {"estado": estado_integridade(dados_atuais[5]), "dado": "integridade"},
     ]
-    dados = Coluna([Texto("Infelizmente, você morreu"), Texto(""), Texto("estados criticos")])
-    motivos = [Texto(f"{estado["dado"]}: {estado['estado'].name}") for estado in estados if estado["estado"] != Estado.ESTAVEL and estado["estado"] != Estado.MORTIFERO]
+    dados = Coluna(
+        [Texto("Infelizmente, você morreu"), Texto(""), Texto("estados criticos")]
+    )
+    motivos = [
+        Texto(f"{estado["dado"]}: {estado['estado'].name}")
+        for estado in estados
+        if estado["estado"] != Estado.ESTAVEL and estado["estado"] != Estado.MORTIFERO
+    ]
     dados.filhos.extend(motivos)
     dados.filhos.append(Texto(""))
-    dados.filhos.append(Texto(f"causa da morte: {','.join(estado["dado"] for estado in estados if estado["estado"] == Estado.MORTIFERO)}"))
+    dados.filhos.append(
+        Texto(
+            f"causa da morte: {','.join(estado["dado"] for estado in estados if estado["estado"] == Estado.MORTIFERO)}"
+        )
+    )
+    pressionado = InputTarefa()
     while True:
-        if estaPressionado("\n"):
-            break
-        
+
         print(
             Tabela(
                 2,
@@ -240,16 +321,19 @@ def derrota():
                 ],
             ).renderizar()
         )
+        pressionado.iniciar()
+        if pressionado.pressionado:
+            break
         esperar(0.1)
         i += 1
         limpar()
+        pressionado.terminar()
 
 
 def vitoria():
     i = 0
+    pressionado = InputTarefa()
     while True:
-        if estaPressionado("\n"):
-            break
         print(
             Tabela(
                 3,
@@ -258,7 +342,6 @@ def vitoria():
                         [
                             Texto("parabens, voce não morreu"),
                             AsciiAnimado("recursos/ascii/parabens.txt", i, 14),
-                            
                             # , efeitos=[Cores1B.AZUL.value.efeito(CorAlvo.TEXTO)]
                         ]
                     ),
@@ -268,16 +351,28 @@ def vitoria():
                             Coluna(
                                 [
                                     Texto(f"{material.name}:{material.value.valor}")
-                                    for material in banco_dados.asteroide.materiais
+                                    for material in banco_dados.rodada.asteroide.materiais
                                 ]
                             ),
                         ]
                     ),
-                    Coluna([Ascii("recursos/ascii/astronauta-inteiro.txt" , efeitos=[Cores1B.ROXO.value.efeito(CorAlvo.TEXTO)])]),
+                    Coluna(
+                        [
+                            Ascii(
+                                "recursos/ascii/astronauta-inteiro.txt",
+                                efeitos=[Cores1B.ROXO.value.efeito(CorAlvo.TEXTO)],
+                            )
+                        ]
+                    ),
                     # , efeitos=[Cores1B.ROXO.value.efeito(CorAlvo.TEXTO)]
                 ],
             ).renderizar()
         )
+        pressionado.iniciar()
+
+        if pressionado.pressionado:
+            break
         esperar(0.25)
+        pressionado.terminar()
         i += 1
         limpar()

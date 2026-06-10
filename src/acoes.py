@@ -11,6 +11,7 @@
 
 from typing import Callable, TypeAlias
 
+from src.banco_dados import Rodada
 from utils.menu import menu, Opcao
 from utils.tui.render.elementos import Ascii, Coluna, Tabela, Texto
 from src.dados import Dados_Atuais, dados_atuais
@@ -23,7 +24,8 @@ funcao_passiva: TypeAlias = Callable[[Dados_Atuais], None]
 tempo = 10
 
 #dados_missao = [[temperatura, comunicacao, bateria, oxigenio, estabilidade, integridade_modulo, temperatura_motor]]
-def ligar_refrigerador(dados: Dados_Atuais):
+def ligar_refrigerador(dados : Dados_Atuais):
+    # rodada.parametros[]
     dados[0] -= 10
     dados[3] -= 5
     

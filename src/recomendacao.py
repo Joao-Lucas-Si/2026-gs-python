@@ -1,13 +1,6 @@
-from enum import Enum
 
+from src.banco_dados import Estado
 from utils.tui.render.elementos import Coluna, Texto
-
-class Estado(Enum):
-    MORTIFERO= 3,
-    CRITICO = 2, 
-    ATENCAO = 1,
-    ESTAVEL = 0
-
 
 def estado_temperatura(temperatura):
     if temperatura < 18 or (temperatura > 30 and temperatura < 35):
@@ -76,16 +69,16 @@ def estado_integridade(integridade):
         estado_integridade = Estado.CRITICO
     return estado_integridade
 
-def estado_motor(temperatura_motor):
-    if temperatura_motor > 3600 and temperatura_motor < 4000 :
-        estado_motor = Estado.ATENCAO
-    elif temperatura_motor > 1000 and temperatura_motor < 3600:
-        estado_motor = Estado.ESTAVEL
-    elif temperatura_motor <= 500 or temperatura_motor > 4000:
-        estado_motor = Estado.MORTIFERO
-    else:
-        estado_motor = Estado.CRITICO
-    return estado_motor
+# def estado_motor(temperatura_motor):
+#     if temperatura_motor > 3600 and temperatura_motor < 4000 :
+#         estado_motor = Estado.ATENCAO
+#     elif temperatura_motor > 1000 and temperatura_motor < 3600:
+#         estado_motor = Estado.ESTAVEL
+#     elif temperatura_motor <= 500 or temperatura_motor > 4000:
+#         estado_motor = Estado.MORTIFERO
+#     else:
+#         estado_motor = Estado.CRITICO
+#     return estado_motor
 
 
 def recomendacao_temperatura(estado_temperatura):
