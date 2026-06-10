@@ -1,10 +1,6 @@
 import random
 from typing import Text, TypedDict
 
-from cycler import V
-from h11 import Event
-from keyboard import press
-
 from src.eventos import Evento, Eventos
 from src.banco_dados import Estado, Parametro, Tendencia
 from src.acoes import menuAcoes
