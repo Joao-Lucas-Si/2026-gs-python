@@ -7,8 +7,6 @@ from typing import Callable, Optional, overload, override
 
 from utils.arquivos import ler_arquivo
 from utils.tui.efeitos import Efeito, aplicarEfeitos, desaplicarEfeitos
-from utils.tui.render.cursor import  Cursor, PrintCursos
-
 
 class Elemento(ABC):
     largura_disponivel: int
@@ -19,7 +17,8 @@ class Elemento(ABC):
 
     def __init__(self, efeitos: Optional[list[Efeito]] = None) -> None:
         tamanho = get_terminal_size()
-        self.largura_disponivel = tamanho.columns 
+        
+        self.largura_disponivel = 186 if tamanho.columns > 186 else 156 if tamanho.columns > 156 else tamanho.columns 
         self.altura_disponivel = tamanho.lines - 7
         if efeitos:
             self.efeitos = efeitos
@@ -116,10 +115,6 @@ class Centralizado(Container):
     def tamanho(self) -> int:
         return self.largura_disponivel
 
-    def escrever(self, janela: Cursor):
-        largura_parcial = self.largura_disponivel - self.tamanho_filhos
-        janela.escrever(self.x + largura_parcial, self.y, self.renderizar_filhos())
-
     @override
     def renderizar(self) -> str:
         largura_parcial = int((self.largura_disponivel - self.tamanho_filhos) / 2)
@@ -191,9 +186,9 @@ class Coluna(Container):
 
     def quebrarLinhas(self, texto: str) -> list[str]:
         linhas: list[str] = [""]
-        palavras = texto.split(" ")
-        largura_disponivel = int(self.largura_disponivel * 0.9)
-        #largura_disponivel = self.largura_disponivel 
+        palavras = texto.strip().split(" ")
+        #largura_disponivel = int(self.largura_disponivel * 0.9)
+        largura_disponivel = self.largura_disponivel 
         atual = 0
         for palavra in palavras:
             if lenEstilizado(palavra) + lenEstilizado(linhas[atual]) > largura_disponivel:
@@ -208,8 +203,8 @@ class Coluna(Container):
     def renderizar(self) -> str:
         self.definir_largura(self.largura_disponivel)
         linhas: list[str] = []
-        largura_disponivel = int(self.largura_disponivel * 0.9)
-        #largura_disponivel = self.largura_disponivel
+         #largura_disponivel = int(self.largura_disponivel * 0.9)
+        largura_disponivel = self.largura_disponivel
         for filho in self.filhos:
             if isinstance(filho, Texto):
                 for quebra in filho.conteudo.split("\n"):
@@ -264,10 +259,7 @@ class Texto(Elemento):
     @property
     def altura_dinamica(self) -> int:
         return 1
-
-    def escrever(self, janela: Cursor) -> None:
-        janela.escrever(self.y, self.x, self.conteudo)
-
+    
     @property
     @override
     def tamanho(self) -> int:
@@ -310,13 +302,6 @@ class AsciiAnimado(Elemento):
     def tamanho(self) -> int:
         return max(map(lambda x: lenEstilizado(x), self.conteudo.split("\n")))
 
-    def escrever(self, janela: Cursor) -> None:
-        linhas = self.conteudo.split("\n")[
-            self.atual * self.altura : (self.atual + 1) * self.altura
-        ]
-
-        for i, linha in enumerate(linhas):
-            janela.escrever(self.y + i, self.x, linha)
 
     def renderizar(self) -> str:
         linhas = self.conteudo.split("\n")[
@@ -346,12 +331,6 @@ class Ascii(Elemento):
     def altura_dinamica(self) -> int:
         return len(self.conteudo.split("\n"))
 
-    def escrever(self, janela: Cursor) -> None:
-        linhas = self.conteudo.split("\n")
-
-        for i, linha in enumerate(linhas):
-            janela.escrever(self.y + i, self.x, linha)
-
     @property
     def tamanho(self) -> int:
         return max(map(lambda x: lenEstilizado(x), self.conteudo.split("\n")))
@@ -377,13 +356,11 @@ class Tabela(Container):
     largura_parcial: list[int]
 
     def definir_largura_filhos(self, largura_disponivel: list[int]):
-        coluna = 0
-        for filho in self.filhos:
-            filho.largura_disponivel = largura_disponivel[coluna]
-            if coluna == (self.colunas - 1):
-                coluna = 0
-            else:
-                coluna += 1
+      
+        for coluna in range(len(self.filhos)):
+            filho = self.filhos[coluna]
+            filho.largura_disponivel = largura_disponivel[coluna % self.colunas]
+           
 
     @property
     def tamanho(self) -> int:
@@ -404,6 +381,7 @@ class Tabela(Container):
                 range(self.colunas),
             )
         )
+     
         self.definir_largura_filhos(self.largura_parcial)
         resultado: list[list[str]] = []
 
@@ -420,8 +398,9 @@ class Tabela(Container):
                 if c > maxAtual:
                     maxAtual = c
                 resultado[r][coluna] = filho.estilizar(linha)
-                if (lenEstilizado(resultado[r][coluna]) < self.largura_parcial[coluna]):
-                    resultado[r][coluna] += " "
+                
+                # if (lenEstilizado(resultado[r][coluna]) < self.largura_parcial[coluna]):
+                #     resultado[r][coluna] += " "
             if coluna == (self.colunas - 1):
                 coluna = 0
                 max += maxAtual + 1
@@ -431,8 +410,11 @@ class Tabela(Container):
 
         for i, linha in enumerate(resultado):
             for j, coluna in enumerate(linha):
+                largura = self.largura_parcial[j % self.colunas]
                 if len(coluna) == 0 or not coluna:
                     resultado[i][j] = " " * (self.largura_parcial[j % self.colunas])
+               
+                #     resultado[i][j] = coluna[:largura]    
         return (
             "\n".join(map(("|" if self.mostrar_divisoes else " ").join, resultado))
             + "\n"

@@ -5,14 +5,6 @@ from src.eventos import Evento, Eventos
 from src.banco_dados import Estado, Parametro, Tendencia
 from src.acoes import menuAcoes
 from src.banco_dados import banco_dados
-from src.recomendacao import (
-    estado_bateria,
-    estado_comunicacao,
-    estado_estabilidade,
-    estado_integridade,
-    estado_oxigenio,
-    estado_temperatura,
-)
 from utils.arquivos import Database
 from utils.menu import Opcao, menu
 from utils.sistema import InputTarefa, esperar, limpar, pausar
@@ -28,7 +20,8 @@ from utils.tui.render.elementos import (
     Tabela,
     Texto,
 )
-from src.dados import dados_missao, dados_atuais, historico_tendencias
+
+# from src.dados import dados_missao, dados_atuais, historico_tendencias
 
 
 def flat[T](lista: list[list[T]]):
@@ -72,7 +65,7 @@ def ciclo_tabela(parametros: list[Parametro]) -> Elemento:
 # ciclo_tabela(10, 10)
 
 
-def cabecalho(ciclos):
+def cabecalho(ciclos = 0):
     print(
         Coluna(
             [
@@ -82,11 +75,11 @@ def cabecalho(ciclos):
                         Texto("MISSION CONTROL"),
                         Preencher("="),
                         Texto(
-                            "Missão ficar rico"
+                            "Operação CosmosMiner"
                             + "\n"
-                            + "Equipe: Equipe Alpha"
-                            + "\n"
-                            + f"Ciclos analisados: {ciclos}"
+                            + "Equipe: AstroTech"
+                            # + "\n"
+                             + (f"\nCiclos analisados: {ciclos}" if ciclos > 0 else "")
                         ),
                         Preencher("="),
                     ],
@@ -96,12 +89,14 @@ def cabecalho(ciclos):
         ).renderizar()
     )
 
+
 def obter_evento():
     if random.randint(0, 10) > 9:
-        
+
         eventos = Eventos.valores()
         evento = eventos[random.randint(0, len(eventos) - 1)]
         return evento.value
+
 
 def mostrar_evento(evento: Evento):
     return Coluna(
@@ -129,19 +124,19 @@ def obter_situacao():
     media = int(total * 0.4)
     baixa = int(total * 0.1)
     estavel = 0
-
+    pontos= f"({atual} pontos criticos)"
     if atual == estavel:
-        return Texto("a nave esta em excelentes condições")
+        return Texto(f"a nave esta em excelentes condições {pontos}")
     elif atual == total:
-        return Texto("o sistema inteiro está comprometido")
+        return Texto(f"o sistema inteiro está comprometido {pontos}")
     elif atual > critico:
-        return Texto("o sistema está quase comprometido")
+        return Texto(f"o sistema está quase comprometido {pontos}")
     elif atual > media:
-        return Texto("o sistema está parcialmente comprometido")
+        return Texto(f"o sistema está parcialmente comprometido {pontos}")
     elif atual > baixa:
-        return Texto("a nave apresenta algumas falhas")
+        return Texto(f"a nave apresenta algumas falhas")
     else:
-        return Texto("o sistema ainda está em condições aceitaveis")
+        return Texto(f"o sistema ainda está em condições aceitaveis (0 pontos criticos)")
 
 
 def obter_situacao_comparativa():
@@ -154,17 +149,17 @@ def obter_situacao_comparativa():
 
         anterior_pontos = sum(list(map(lambda x: x.value, anterior)))
         atual_pontos = sum(map(lambda x: x.value, atual))
-
+        comparacao = f"({atual_pontos} vs {anterior_pontos})"
         if anterior_pontos > atual_pontos:
             return Texto(
-                "esse ciclo apresenta uma melhora na condição em comparação ao anterior"
+                f"esse ciclo apresenta uma melhora na condição em comparação ao anterior {comparacao}"
             )
         elif anterior_pontos < atual_pontos:
             return Texto(
-                "esse ciclo apresenta uma piora na condição em comparação ao anterior"
+                f"esse ciclo apresenta uma piora na condição em comparação ao anterior {comparacao}"
             )
         return Texto(
-            "quanto o ciclo atual quanto o anteiror apresentam a mesma condição"
+            f"quanto o ciclo atual quanto o anteiror apresentam a mesma condição {comparacao}"
         )
     return Coluna([])
 
@@ -178,7 +173,7 @@ def ciclo(ciclos):
     parametros = rodada.parametros
     esperar(0.5)
     evento = obter_evento()
-    if (evento):
+    if evento:
         evento.consequencia(rodada.parametros)
         for i, parametro in enumerate(rodada.parametros):
             rodada.dados_atuais[i] = parametro.valor
@@ -190,8 +185,8 @@ def ciclo(ciclos):
     menu(
         "Relatorio ciclo",
         [
-            Opcao(Coluna([Texto("continuar?")]), nothing),
-            Opcao(Coluna([Texto("abrir ações")]), menuAcoes),
+            Opcao(Coluna([Texto("1. continuar?")]), nothing),
+            Opcao(Coluna([Texto("2. abrir ações")]), menuAcoes),
         ],
         colunas=2,
         top=lambda: Coluna(
@@ -206,7 +201,7 @@ def ciclo(ciclos):
                             ]
                         ),
                         Coluna([Ascii("recursos/ascii/naves/foguete_medio.txt")]),
-                    ],
+                    ]
                 ),
                 Coluna(
                     [Texto("Situação"), obter_situacao(), obter_situacao_comparativa()],
@@ -230,17 +225,15 @@ def ciclo(ciclos):
 
 # recursos/ascii/naves/foguete_medio.txt
 def gerenciar_ciclo():
-
-    while banco_dados.rodada.tempo_atual < banco_dados.rodada.tempo_final:
+    rodada = banco_dados.rodada
+    while rodada.tempo_atual <= rodada.tempo_final:
         limpar()
-        if banco_dados.rodada.tempo_atual == 1:
-            cabecalho(banco_dados.rodada.tempo_atual)
-        banco_dados.rodada.dados.append(
-            [parametro.valor for parametro in banco_dados.rodada.parametros]
-        )
-        ciclo(banco_dados.rodada.tempo_atual)
+        if rodada.tempo_atual == 1:
+            cabecalho()
+        rodada.dados.append([parametro.valor for parametro in rodada.parametros])
+        ciclo(rodada.tempo_atual)
 
-        historico_tendencias.append(
+        rodada.tendencias.append(
             [
                 parametro.tendencia_atual.estado
                 for parametro in banco_dados.rodada.parametros
@@ -249,17 +242,18 @@ def gerenciar_ciclo():
         for parametro in banco_dados.rodada.parametros:
             parametro.tendencia_atual.atividade += 1
             parametro.gerar_tendencia()
-            
 
-        if (
-            estado_temperatura(dados_atuais[0]) == Estado.MORTIFERO
-            or estado_comunicacao(dados_atuais[1]) == Estado.MORTIFERO
-            or estado_bateria(dados_atuais[2]) == Estado.MORTIFERO
-            or estado_oxigenio(dados_atuais[3]) == Estado.MORTIFERO
-            or estado_estabilidade(dados_atuais[4]) == Estado.MORTIFERO
-            or estado_integridade(dados_atuais[5]) == Estado.MORTIFERO
-        ):
+        for parametro in rodada.parametros:
+            if (
+                parametro.tendencia_atual.estado == Estado.CRITICO
+                and parametro.tendencia_atual.atividade > 1
+                and random.randint(0, 10) > 7
+            ):
+                rodada.morte = parametro.nome
+
+        if rodada.morte:
             break
+
         banco_dados.rodada.tempo_atual += 1
 
     if banco_dados.rodada.tempo_atual < banco_dados.rodada.tempo_final:
@@ -275,39 +269,53 @@ def gerenciar_ciclo():
         vitoria()
 
 
-class Dado(TypedDict):
-    dado: str
-    estado: Estado
+def sumario():
+    rodada = banco_dados.rodada
+    # dados_missao = [[temperatura, comunicacao, bateria, oxigenio, estabilidade, integridade_modulo]]
+    dados_tabela: list[Elemento] = list(
+        [
+            Coluna([Texto("Temperatura")]),
+            Coluna([Texto("Comunicação")]),
+            Coluna([Texto("Bateria")]),
+            Coluna([Texto("Oxigenio")]),
+            Coluna([Texto("Estabilidade")]),
+            Coluna([Texto("Integridade")]),
+        ]
+        + [Coluna([Texto(f"{x}")]) for dado in rodada.dados for x in dado]
+    )
+    estados_tabela: list[Elemento] = list(
+        [
+            Coluna([Texto("Temperatura")]),
+            Coluna([Texto("Comunicação")]),
+            Coluna([Texto("Bateria")]),
+            Coluna([Texto("Oxigenio")]),
+            Coluna([Texto("Estabilidade")]),
+            Coluna([Texto("Integridade")]),
+        ]
+        + [Coluna([Texto(f"{x.name}")]) for dado in rodada.tendencias for x in dado]
+    )
+    print(Coluna([Texto("dados"), Tabela(6, dados_tabela)]).renderizar())
+    print(Coluna([Texto("estados"), Tabela(6, estados_tabela)]).renderizar())
 
 
 def derrota():
+    rodada = banco_dados.rodada
     i = 0
-    estados: list[Dado] = [
-        {"estado": estado_temperatura(dados_atuais[0]), "dado": "temperatura"},
-        {"estado": estado_comunicacao(dados_atuais[1]), "dado": "comunicação"},
-        {"estado": estado_bateria(dados_atuais[2]), "dado": "bateria"},
-        {"estado": estado_oxigenio(dados_atuais[3]), "dado": "oxigenio"},
-        {"estado": estado_estabilidade(dados_atuais[4]), "dado": "estabilidade"},
-        {"estado": estado_integridade(dados_atuais[5]), "dado": "integridade"},
-    ]
+
     dados = Coluna(
         [Texto("Infelizmente, você morreu"), Texto(""), Texto("estados criticos")]
     )
     motivos = [
-        Texto(f"{estado["dado"]}: {estado['estado'].name}")
-        for estado in estados
-        if estado["estado"] != Estado.ESTAVEL and estado["estado"] != Estado.MORTIFERO
+        Texto(f"{parametro.nome}: {parametro.tendencia_atual.estado.name}")
+        for parametro in rodada.parametros
+        if parametro.tendencia_atual.estado != Estado.ESTAVEL
     ]
     dados.filhos.extend(motivos)
     dados.filhos.append(Texto(""))
-    dados.filhos.append(
-        Texto(
-            f"causa da morte: {','.join(estado["dado"] for estado in estados if estado["estado"] == Estado.MORTIFERO)}"
-        )
-    )
+    dados.filhos.append(Texto(f"causa da morte: {rodada.morte}"))
     pressionado = InputTarefa()
     while True:
-
+        cabecalho(banco_dados.rodada.tempo_atual)
         print(
             Tabela(
                 2,
@@ -324,12 +332,13 @@ def derrota():
         i += 1
         limpar()
         pressionado.terminar()
-
+    sumario()
 
 def vitoria():
     i = 0
     pressionado = InputTarefa()
     while True:
+        cabecalho(banco_dados.rodada.tempo_atual)
         print(
             Tabela(
                 3,
@@ -372,3 +381,4 @@ def vitoria():
         pressionado.terminar()
         i += 1
         limpar()
+    sumario()

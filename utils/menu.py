@@ -51,9 +51,11 @@ def menu(titulo: str, opcoes: list[Opcao], colunas: int = 3, top: Callable[[], E
                 break
             else:
                 print("opção invalida")
-        except:
+        except Exception as e:
+            if isinstance(e, KeyboardInterrupt):
+                raise KeyboardInterrupt()
             limpar()
             print("valor invalido")
-        esperar(0.5)
+    
     opcoes[selecionado].codigo()
         

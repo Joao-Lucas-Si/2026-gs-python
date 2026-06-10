@@ -1,13 +1,12 @@
 from enum import Enum
 import random
-from typing import Tuple
+from typing import Optional, Tuple
 
 from src.tipos import Asteroide
 from utils.arquivos import Database
 
 
 class Estado(Enum):
-    MORTIFERO = 3
     CRITICO = 2
     ATENCAO = 1
     ESTAVEL = 0
@@ -64,7 +63,7 @@ class Parametro:
         ]
 
         atual = validos[random.randint(0, len(validos) - 1)]
-
+        atual.atividade = 0
         self.tendencia_atual = atual
 
 
@@ -73,7 +72,7 @@ class Rodada:
     tempo_final: int = 0
     tempo_atual: int = 1
     tendencias: list[list[Estado]] = []
-   
+    morte: Optional[str] = None
         
 
     @property
@@ -141,9 +140,9 @@ class Rodada:
             "Oxigenio",
             [
                 Tendencia((80, 100), Estado.ESTAVEL, "abundacia de Oxigenio"),
-                Tendencia((70, 80), Estado.ATENCAO, "Oxigenio em escotamento"),
+                Tendencia((60, 80), Estado.ATENCAO, "Oxigenio em escotamento"),
                 Tendencia(
-                    (0, 70), Estado.CRITICO, "Oxigenio acabando, ligue o gerador"
+                    (0, 60), Estado.CRITICO, "Oxigenio acabando, ligue o gerador"
                 ),
             ],
         ),

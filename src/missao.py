@@ -24,32 +24,33 @@ def menuMissao():
             materiais_finais.append(materiais[random.randint(0, len(materiais)-1)])
         return Asteroide(materiais_finais, nome, random.randint(6, 15))
             
-    while True:
-        limpar()    
-        asteroides = [criarAsteroide() for i in range(random.randint(2, 8))]
-            
+    # while True:
+    limpar()    
+    asteroides = [criarAsteroide() for i in range(random.randint(2, 8))]
         
-        def mostrarAsteroide(asteroide: Asteroide) -> Coluna:
-            # recursos/ascii/asteroide_grande.txt
-            #recursos/ascii/asteroide.txt
-            return Coluna([
-                Ascii("recursos/ascii/asteroide_grande.txt"),
-                Texto(asteroide.nome),
-                Texto(f"tempo estimado: {asteroide.tempo}"),
-                Texto("Materiais:"+ ", ".join(map(lambda x: x.value.nome, asteroide.materiais)))
-            ])
-        
-        
-        def escolher_missao(i : int):
-            def comecar_missao():
-                rodada = Rodada()
-                rodada.tempo_final = asteroides[i].tempo
-                rodada.asteroide = asteroides[i]
-                rodada.tempo_inicial = asteroides[i].tempo
-                rodada.tempo_atual = 1
-                banco_dados.rodada = rodada
-                gerenciar_ciclo()
-            return comecar_missao
-        opcoes: list[Opcao] = list(map(lambda x: Opcao(mostrarAsteroide(x[1]), escolher_missao(x[0])), enumerate(asteroides)))
-        menu("Escolha de Missão", opcoes, 4)
+    
+    def mostrarAsteroide(asteroide: Asteroide, i: int) -> Coluna:
+        # recursos/ascii/asteroide_grande.txt
+        #recursos/ascii/asteroide.txt
+        return Coluna([
+            Ascii("recursos/ascii/asteroide_grande.txt"),
+            Texto(f"{i + 1}. {asteroide.nome}"),
+            Texto(f"tempo estimado: {asteroide.tempo}"),
+            Texto("Materiais:"+ ", ".join(map(lambda x: x.value.nome, asteroide.materiais)))
+        ])
+    
+    
+    def escolher_missao(i : int):
+        def comecar_missao():
+            rodada = Rodada()
+            rodada.tempo_final = asteroides[i].tempo
+            rodada.asteroide = asteroides[i]
+            rodada.tempo_inicial = asteroides[i].tempo
+            rodada.tempo_atual = 1
+            banco_dados.rodada = rodada
+            gerenciar_ciclo()
+        return comecar_missao
+    opcoes: list[Opcao] = list(map(lambda x: Opcao(mostrarAsteroide(x[1], x[0]), escolher_missao(x[0])), enumerate(asteroides)))
+    
+    menu("Escolha de Missão", opcoes, 4)
     
