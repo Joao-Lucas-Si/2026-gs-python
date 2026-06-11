@@ -8,7 +8,7 @@
 from enum import Enum
 from typing import Callable
 
-from h11 import Event
+
 
 from src.banco_dados import Estado, Parametro
 
