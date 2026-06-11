@@ -7,8 +7,8 @@ from src.acoes import menuAcoes
 from src.banco_dados import banco_dados
 from utils.arquivos import Database
 from utils.menu import Opcao, menu
-from utils.sistema import InputTarefa, esperar, limpar, pausar
-
+from utils.sistema import esperar, limpar, pausar
+import os
 from utils.tui.efeitos import CorAlvo, Cores1B
 from utils.tui.render.elementos import (
     Alinhamento,
@@ -313,8 +313,7 @@ def derrota():
     dados.filhos.extend(motivos)
     dados.filhos.append(Texto(""))
     dados.filhos.append(Texto(f"causa da morte: {rodada.morte}"))
-    pressionado = InputTarefa()
-    while True:
+    def elemento(i: int):
         cabecalho(banco_dados.rodada.tempo_atual)
         print(
             Tabela(
@@ -325,19 +324,33 @@ def derrota():
                 ],
             ).renderizar()
         )
-        pressionado.iniciar()
-        if pressionado.pressionado:
-            break
-        esperar(0.1)
-        i += 1
-        limpar()
-        pressionado.terminar()
+    def padrao():
+        print(f"ocorreu um erro com a renderização de animação, o projeto foi desenvolvido em linux, então certas funcionalidades mais complexas podem não funcionar em mac ou windows")
+        elemento(0)
+    try:
+        if os.name == "nt":
+            padrao()
+        else:
+            from utils.tarefa import InputTarefa
+            pressionado = InputTarefa()
+            while True:
+                elemento(i)
+                pressionado.iniciar()
+                if pressionado.pressionado:
+                    break
+                esperar(0.1)
+                i += 1
+                limpar()
+                pressionado.terminar()
+    except:
+        padrao()
+        # pressionado.terminar()
     sumario()
 
 def vitoria():
     i = 0
-    pressionado = InputTarefa()
-    while True:
+    
+    def elemento(i: int):
         cabecalho(banco_dados.rodada.tempo_atual)
         print(
             Tabela(
@@ -373,12 +386,28 @@ def vitoria():
                 ],
             ).renderizar()
         )
-        pressionado.iniciar()
-
-        if pressionado.pressionado:
-            break
-        esperar(0.25)
-        pressionado.terminar()
-        i += 1
+    def padrao():
         limpar()
+        print(f"ocorreu um erro com a renderização de animação, o projeto foi desenvolvido em linux, então certas funcionalidades mais complexas podem não funcionar em mac ou windows")
+        elemento(i)
+    try:
+        if os.name == "nt":
+            padrao()
+        else:
+            from utils.tarefa import InputTarefa
+            pressionado = InputTarefa()
+            while True:
+                
+                pressionado.iniciar()
+                elemento(i)
+                if pressionado.pressionado:
+                    break
+                esperar(0.25)
+                pressionado.terminar()
+                i += 1
+                limpar()
+    except:
+        padrao()
+        
+    
     sumario()
